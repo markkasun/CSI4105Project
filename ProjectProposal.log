@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (MiKTeX 2.9 64-bit) (preloaded format=pdflatex 2014.1.8)  12 FEB 2016 19:43
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (MiKTeX 2.9 64-bit) (preloaded format=pdflatex 2014.1.8)  12 FEB 2016 19:46
 entering extended mode
 **ProjectProposal.tex
 
@@ -310,7 +310,7 @@ ieved from
  []
 
 [1] [2]
-Overfull \hbox (287.88603pt too wide) in paragraph at lines 34--35
+Overfull \hbox (287.88603pt too wide) in paragraph at lines 38--39
 []\OT1/cmr/m/n/12 Yair Bar-tal (2005) Ad-vanced Al-go-rithms { Lec-ture re-trie
 ved from http://www.cs.huji.ac.il/course/2005/algo2/scribes/lecture2.pdf 
  []
@@ -335,7 +335,7 @@ type1/public/amsfonts/cm/cmr12.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/pub
 lic/amsfonts/cm/cmr17.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfo
 nts/cm/cmr7.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr
 8.pfb><C:/Program Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
-Output written on ProjectProposal.pdf (4 pages, 125716 bytes).
+Output written on ProjectProposal.pdf (4 pages, 126036 bytes).
 PDF statistics:
  55 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)

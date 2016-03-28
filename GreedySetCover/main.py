@@ -6,7 +6,8 @@ import timeit
 def main():
     output = open("test.html", 'w')
     output.write("<html><body><table border=1>\n")
-    output.write("<tr><th>Problem</th><th>Optimal</th><th>Greedy</th><th>Harmonic</th><th>Run Time</th></tr>\n")
+    output.write("<tr><th>Problem</th><th>Elements</th><th>Sets</th><th>Optimal</th>"
+                 "<th>Greedy</th><th>Harmonic</th><th>Run Time</th></tr>\n")
     for current_problem in sorted(library):
         file_location = "../library/" + current_problem + ".txt"
         optimal = library[current_problem]
@@ -31,8 +32,9 @@ def main():
         guaranteed_cost = harmonic(largest_set_size) * optimal
         print "Guaranteed Greedy Cost(H): ", guaranteed_cost
 
-        output.write("<tr><td>" + current_problem + "</td><td>" + str(optimal) + "<td>" + str(total_cost) +
-                     "</td><td>" + str(int(guaranteed_cost)) + "</td><td>" + str(run_time) + "</td></tr>\n")
+        output.write("<tr><td>" + str(current_problem) + "</td><td>" + str(number_of_elements) + "</td><td>" +
+                     str(len(sets)) + "</td><td>" + str(optimal) + "<td>" + str(total_cost) + "</td><td>" +
+                     str(int(guaranteed_cost)) + "</td><td>" + str(run_time) + "</td></tr>\n")
     output.write("</table></body></html>")
     output.close()
 
@@ -155,6 +157,41 @@ library = {
     'scpd3': 72,
     'scpd4': 62,
     'scpd5': 61,
+    'scpe1': 5,
+    'scpe2': 5,
+    'scpe3': 5,
+    'scpe4': 5,
+    'scpe5': 5,
+    'scpnre1': 0,
+    'scpnre2': 0,
+    'scpnre3': 0,
+    'scpnre4': 0,
+    'scpnre5': 0,
+    'scpnrf1': 0,
+    'scpnrf2': 0,
+    'scpnrf3': 0,
+    'scpnrf4': 0,
+    'scpnrf5': 0,
+    'scpnrg1': 0,
+    'scpnrg2': 0,
+    'scpnrg3': 0,
+    'scpnrg4': 0,
+    'scpnrg5': 0,
+    'scpnrh1': 0,
+    'scpnrh2': 0,
+    'scpnrh3': 0,
+    'scpnrh4': 0,
+    'scpnrh5': 0,
+    'scpcyc06': 0,
+    'scpcyc07': 0,
+    'scpcyc08': 0,
+    'scpcyc09': 0,
+    'scpcyc10': 0,
+    'scpcyc11': 0,
+    'scpclr10': 0,
+    'scpclr11': 0,
+    'scpclr12': 0,
+    'scpclr13': 0,
 }
 
 if __name__ == "__main__":

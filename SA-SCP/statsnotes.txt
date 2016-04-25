@@ -1,0 +1,10 @@
+The guarantee is always very generous, yet it seems to scale linearly with the results of the heuristic. The computed guarantee is off by a roughly constant factor!
+Update: As such I've plotted y/x vs x instead of y vs x, since I'm only interested in the convergence to const for larger sets. Though the sample is very restricted in scale! Don't have optimal for large problems...
+Also changed to scatterplot to make density of samples clear for different size. Apparent convergence may just be undersampling. Also visible trends perhaps corresponding to different sets.
+TODO: add superindex for problem set (re:[a-z]). Plot each set with different colour (so one at a time is best).
+
+Different sorting shows that heur and appx are complementary. Makes sense: they are ~dual methods. Both tend to grow for larger sizes, regardless of definition of size as sets elems or sets*elems, though for these problems heur is faster for certain larger problems. Heur scales particularly with elems, appx with sets*elems. Certain problems where heur is slow correspond to problems where appx gives particularly better results. Both find similar results in general.
+
+Need to double-check sorting! Some things seem strange about the plots. Maybe check effect of subsorting. The trends are also misleading; shouldn't use line plots for discrete data with large variation. Drop in my binning plot, or use histogram, or use a specialized stats plot from seaborn or pandas like Trellis.
+
+Note, I've cut off very large elems*sets problems, which are particularly interesting on their own (clear exponential scaling of both methods) though hard to visualize alongside smaller problems. Look at those too!

@@ -1,0 +1,47 @@
+\graphicspath{{data/figures/}}
+
+\newcommand{\titlesize}{\normalsize}
+\newcommand{\ticksize}{\scriptsize}
+\newcommand{\labelsize}{\small}
+\newcommand{\legendsize}{\scriptsize}
+
+%% Initialize text
+% \newcommand{\annsize}{\tiny}
+% \newcommand{\annCE}[1]{\annsize C.Edge}
+% \newcommand{\annFWHM}[1]{\annsize Photopeak}
+\newcommand{\figtitletext}{Name Me!}
+\newcommand{\xaxistext}{Label me!}
+\newcommand{\yaxistext}{Label me!}
+\newcommand{\ohmplottext}{Label me!}
+\newcommand{\rBlTplottext}{Label me!}
+\newcommand{\rBmTplottext}{Label me!}
+\newcommand{\rTnBplottext}{Label me!}
+\newcommand{\rTlBplottext}{Label me!}
+\newcommand{\rTmBplottext}{Label me!}
+
+% Figure text formatting
+\newcommand{\figuretitle}{\titlesize \figtitletext}
+\newcommand{\xaxislabel}{\labelsize \xaxistext}
+\newcommand{\yaxislabel}{\labelsize \yaxistext}
+\newcommand{\resyaxislabel}{\labelsize Residuals}
+% Legend text formatting
+\newcommand{\labelplotohm}{\legendsize \ohmplottext}
+\newcommand{\labelplotrBlT}{\legendsize \rBlTplottext}
+\newcommand{\labelplotrBmT}{\legendsize \rBmTplottext}
+\newcommand{\labelplotrTnB}{\legendsize \rTnBplottext}
+\newcommand{\labelplotrTlB}{\legendsize \rTlBplottext}
+\newcommand{\labelplotrTmB}{\legendsize \rTmBplottext}
+
+\newcommand{\loadfig}[1]{%
+    {\ticksize \input{data/figures/#1.pdf_tex}}
+}
+% \newcommand{\loadfig}[1]{\relax}
+
+%% Usage example:
+% \def\svgwidth{\textwidth}
+% \def\figtitletext{Ohm's Law}
+% \def\xaxislabel{$I$/\si{\ampere}}
+% \def\yaxislabel{$V_x$/\si{\volt}}
+% \def\labelplotohm{$T = \SI{299}{\kelvin}$, $B = \SI{0}{\tesla}$}
+% \loadfig{ohm}
+% \captionbelowof{figure}{Voltage $V_x$ plotted against current $I$ at room temperature with no applied magnetic field. The relationship is linear: the semiconductor is ohmic.}\label{fig:ohm}

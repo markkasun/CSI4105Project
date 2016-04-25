@@ -1,0 +1,101 @@
+% arara: pdflatex: { shell : yes, action: nonstopmode, draft: yes }
+% arara: biber
+% arara: pdflatex: { shell : yes, action: nonstopmode, draft: yes }
+% arara: pdflatex: { shell : yes, action: nonstopmode}
+\documentclass[paper=letter, BCOR=0mm, DIV=calc, fontsize=10pt,%
+               titlepage=true]{scrartcl}
+
+\usepackage[utf8]{inputenc}
+\DeclareUnicodeCharacter{2212}{$-{}$} % matplotlib negative ticklabels
+
+\usepackage{amsmath,amssymb}
+\setlength{\jot}{8pt} % increase align line spacing
+\usepackage[T1]{fontenc}
+  \usepackage{newpxtext}
+  \linespread{1.05}
+  \usepackage{newpxmath}
+  % \AtBeginDocument{\renewcommand{\partial}{\uppartial}}
+\setkomafont{disposition}{\normalcolor\sffamily}
+\pagestyle{headings}
+\usepackage[normalem]{ulem}
+
+%BIB%
+\usepackage[%
+    backend=biber,
+    style=authoryear-icomp,
+    %sortlocale=de_DE,
+    url=true,
+    doi=true,
+    eprint=false
+]{biblatex}
+% specificy bib resources in build_aux with \addbibresource or \bibliography
+\DefineBibliographyStrings{english}{%
+  bibliography = {References},% replace "references" with "bibliography"  for `book`/`report`
+}
+\setlength\bibitemsep{\itemsep} %increase entry spacing. Nice if the global spacing is single space. Default is \itemsep
+\KOMAoption{bibliography}{openstyle, totoc}
+
+% % Table stuff
+% \usepackage[separate-uncertainty, table-omit-exponent]{siunitx}
+% \usepackage{booktabs}
+% \addtokomafont{caption}{\small}
+% \setkomafont{captionlabel}{\normalsize}
+% \setcapindent{1em}
+% \usepackage{pgfplots}
+% \usepackage{pgfplotstable}
+% \usepackage{readarray}
+
+\usepackage{xparse}
+\usepackage{cool}
+\Style{DSymb={\mathrm d}}
+\Style{LogParen=p}
+\Style{IntegrateDifferentialDSymb={\mathrm d}}
+\usepackage{physics}
+\usepackage{graphicx}
+\usepackage[separate-uncertainty, table-omit-exponent]{siunitx}
+\usepackage[version=3]{mhchem}
+\usepackage[english]{isodate}
+\usepackage[activate={true,nocompatibility},final,tracking=true,kerning=false,spacing=false,factor=1000,stretch=15,shrink=15]{microtype}
+
+% KOMA-script or custom geometry? Choose one:
+% \typearea[current]{last}
+% \usepackage[top=1.12in, bottom=1.62in, left=1.7in, right=1.7in]{geometry}
+\usepackage[top=0.78in, bottom=1.22in, left=1.35in, right=1.35in]{geometry}
+
+\usepackage{minted}
+\usemintedstyle{tango}
+\DeclareNewTOC[
+  type=scrlisting,
+  name=Listing,
+  nonfloat,
+  listname={List of Listings},
+  counterwithin=chapter
+]{slol}
+
+\input{util/datamacros.tex}
+\input{util/figuremacros.tex}
+% \input{util/tablemacros.tex}
+
+\usepackage[all]{foreign} %which, among other things, uses the commands from xpunctuate to define \eg and \ie
+\renewcommand\foreignfullfont{\emph} % default \emph. Biblatex does not emphasize latin, so I may want to remove emphasis to keep things cohesive.
+\renewcommand\foreignabbrfont{\em} % default \em. As above.
+\defasforeign[perse]{per se}
+\defasforeign[sans]{sans}
+
+\subject{CSI4105 Type 1 Project}
+\title{Weighted Set Covering Problem Research Proposal}
+\author{
+        Ali Mowazi \\ \texttt{amowa058@uottawa.ca} \\ 5879953
+        \and Jeremiah O'Neil \\ \texttt{jonei096@uottawa.ca} \\ 6498391
+        \and Mark Kasun \\ \texttt{mkasu059@uottawa.ca} \\ 3806554
+        }
+\date{\today}
+\titlehead{\Large University of Ottawa/\\Universit\'e d'Ottawa}
+
+\usepackage{todonotes}
+
+\input{build_aux}
+
+\begin{document}
+  \input{\target}
+\end{document}

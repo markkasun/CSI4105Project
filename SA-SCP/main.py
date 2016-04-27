@@ -1,3 +1,4 @@
+from __future__ import division
 import random as rn
 import numpy as np
 import pandas as pd
@@ -10,16 +11,25 @@ import heuristic.main as heuristic
 
 
 def main():
-    # problems = sorted(library)
-    problems = ['scp41']
+    nruns = 1
+    problems = sorted(library)
+    # problems = ['scp41']
 
     for problem_name in problems:
         procproblem = process_problem(problem_name, w=False, v=True)
+        nelems = len(procproblem['lsets'])
+        nsets = len(procproblem['rsets'])
+        size = 0
+        for s in procproblem['rsets']:
+            size += len(s)
+        print('Size: {}'.format(size))
 
-        T_init = 1
-        ndrop = 1
-        activity_init = 1000
-        stages = [(0.05, 0.8)]
+        T_init = np.mean(procproblem['costs']) * nsets
+        ndrop = int(np.ceil(0.2 * nsets * nelems / size))
+        # consider approxcost/meansetweight
+        print ndrop
+        activity_init = nelems
+        stages = [(0.05*T_init, 0.8)]
         # stages = [(0.2, 0.8), (0.05, 0.9)]
         # each stage specifies cooling rate and stage end temperature, and
         #   stages supports extension to change cooling function and to swap
@@ -28,7 +38,7 @@ def main():
         local_searcher = heuristic_sampler(ndrop, **procproblem)
         local_searcher.send(None)
 
-        activity_func = lambda x: activity_init*x/T_init
+        activity_func = lambda x: activity_init * x / T_init
         feasible = init_feasible(**procproblem)
         workpiece = MH_sampler(feasible, activity_func, local_searcher)
         workpiece.send(None)
@@ -36,11 +46,27 @@ def main():
         oven = oven_gen(T_init)
         oven.send(None)
 
-        for T_end, coolrate in stages:
-            T = oven.send((lambda x: coolrate*x, workpiece))
-            while T > T_end:
-                T, feasible = oven.next()
-        print(np.sum(procproblem['costs'][feasible['sets']]))
+        times = []
+        costs = []
+        for _ in xrange(nruns):
+            start_time = timeit.default_timer()
+
+            for T_end, coolrate in stages:
+                T = oven.send((lambda x: coolrate*x, workpiece))
+                while T > T_end:
+                    T, feasible = oven.next()
+
+            stop_time = timeit.default_timer()
+            runtime = stop_time - start_time
+            times.append(runtime)
+            cost = np.sum(procproblem['costs'][feasible['sets']])
+            costs.append(cost)
+            print(cost, runtime)
+        print('---')
+
+        df = pd.DataFrame.from_dict({'cost': costs,
+                                     'time': times})
+        df.to_csv('out/'+problem_name+'.csv')
 
 
 def process_problem(problem_name, **kwargs):
@@ -137,7 +163,6 @@ def heuristic_sampler(ndrop, costs, rsets, lsets):
                 proposition, added, reduced = complete(**partial)
                 subtracted = dropped.union(reduced)
             else:
-                print inertia
                 negated = subtracted.intersection(added)
                 # these sets are generators and upset numpy causing error in
                 #   cast to uint on sum over costs. Can't use np.sum or index

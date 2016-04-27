@@ -11,14 +11,16 @@ import heuristic.main as heuristic
 
 def main():
     # problems = sorted(library)
-    problems = ['scpcyc10']
+    problems = ['scp41']
 
     for problem_name in problems:
         procproblem = process_problem(problem_name, w=False, v=True)
 
         T_init = 1
-        ndrop = 100
-        stages = ((0.2, 0.8), (0.05, 0.9))
+        ndrop = 1
+        activity_init = 1000
+        stages = [(0.05, 0.8)]
+        # stages = [(0.2, 0.8), (0.05, 0.9)]
         # each stage specifies cooling rate and stage end temperature, and
         #   stages supports extension to change cooling function and to swap
         #   workpieces in parallel tempering or adjust localsearch parameters
@@ -26,8 +28,9 @@ def main():
         local_searcher = heuristic_sampler(ndrop, **procproblem)
         local_searcher.send(None)
 
+        activity_func = lambda x: activity_init*x/T_init
         feasible = init_feasible(**procproblem)
-        workpiece = MH_sampler(feasible, local_searcher)
+        workpiece = MH_sampler(feasible, activity_func, local_searcher)
         workpiece.send(None)
 
         oven = oven_gen(T_init)
@@ -77,6 +80,8 @@ def init_feasible(costs, rsets, lsets):
 def heuristic_sampler(ndrop, costs, rsets, lsets):
     proposition = None
     cost_diff = 0
+    inertia = 0
+    activity = 1
 
     def dropsets(feasible, ndrop):
         sets = feasible['sets']
@@ -119,28 +124,37 @@ def heuristic_sampler(ndrop, costs, rsets, lsets):
         return proposition, added, dropme
 
     while True:
-        feasible = yield proposition, cost_diff
-
-        partial, dropped = dropsets(feasible, ndrop)
-        proposition, added, reduced = complete(**partial)
-
-        subtracted = dropped.union(reduced)
-        negated = subtracted.intersection(added)
-        # these sets are generators and upset numpy causing error in cast to
-        #   uint on sum over costs. Can't use np.sum or index costs by list...
+        feasible, activity = yield proposition, cost_diff
         cost_diff = 0
-        for i in added.difference(negated):
-            cost_diff += costs[i]
-        for i in subtracted.difference(negated):
-            cost_diff -= costs[i]
-        # cost_diff = (np.sum(costs[list(added.difference(negated))]) -
-        #              np.sum(costs[list(subtracted.difference(negated))]))
+        added = None
+        subtracted = None
+        inertia = 0
+
+        while inertia < activity:
+            inertia += 1
+            if added == subtracted:
+                partial, dropped = dropsets(feasible, ndrop)
+                proposition, added, reduced = complete(**partial)
+                subtracted = dropped.union(reduced)
+            else:
+                print inertia
+                negated = subtracted.intersection(added)
+                # these sets are generators and upset numpy causing error in
+                #   cast to uint on sum over costs. Can't use np.sum or index
+                #   costs by list...
+                for i in added.difference(negated):
+                    cost_diff += costs[i]
+                for i in subtracted.difference(negated):
+                    cost_diff -= costs[i]
+                # cost_diff = np.sum(costs[list(added.difference(negated))]) -\
+                #     np.sum(costs[list(subtracted.difference(negated))])
+                break
 
 
-def MH_sampler(feasible, local_searcher):
+def MH_sampler(feasible, activity_func, local_searcher):
     while True:
         T = yield feasible
-        proposed, cost_diff = local_searcher.send(feasible)
+        proposed, cost_diff = local_searcher.send((feasible, activity_func(T)))
         if cost_diff < 0 or rn.random() < np.exp(-cost_diff/T):
             feasible = proposed
 

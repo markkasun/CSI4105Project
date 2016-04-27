@@ -1,5 +1,5 @@
-cleanup/
-SA-SCP/out/
+latex/cleanup/
 latex/Proposal/*.pdf
+*out/
 *.sublime*
 *.pyc

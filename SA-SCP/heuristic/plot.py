@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname('../')))
+sys.path.append(os.path.join(os.path.dirname('../../')))
 from GreedySetCover.main import library
 
 problems = ['scp47', 'scp510', 'scp62', 'scpa3', 'scpb2', 'scpc4', 'scpd4',

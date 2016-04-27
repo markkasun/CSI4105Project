@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname('../')))
+sys.path.append(os.path.join(os.path.dirname('../../')))
 from GreedySetCover.main import library
 
 # problems = sorted(library)  # sorted([_ for _ in library if "scpe" in _])
@@ -33,7 +33,7 @@ heurdf = pd.DataFrame.from_dict({'problem': problems,
                                  'maxcost': maxcosts,
                                  'mincost': mincosts}).set_index('problem')
 # heurdf.to_csv('heuristic.csv')
-appxdf = pd.read_csv('../GreedySetCover/approxdata.csv')\
+appxdf = pd.read_csv('../../GreedySetCover/approxdata.csv')\
          .rename(columns=lambda x: ''.join(x.split()).lower())\
          .set_index('problem')
 

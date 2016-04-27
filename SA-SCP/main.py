@@ -1,184 +1,156 @@
 import random as rn
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from itertools import chain
 import timeit
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname('../')))
 from GreedySetCover.main import library
-
-ntrials = 1
+import heuristic.main as heuristic
 
 
 def main():
-    start = timeit.default_timer()
-    tot_gen_time = 0
-    problems = sorted(library)  # sorted([_ for _ in library if "scpe" in _])
-    for current_problem in problems:
-        # current_problem = 'scpcyc07'
-        file_location = "../library/" + current_problem + ".txt"
+    # problems = sorted(library)
+    problems = ['scpcyc10']
 
-        # IMPORT
-        start_import = timeit.default_timer()
+    for problem_name in problems:
+        procproblem = process_problem(problem_name, w=False, v=True)
 
-        costs, rsets, lsets = import_problem(file_location, w=False, v=True)
-        costs = np.asarray(costs, dtype='uint16')
+        T_init = 1
+        ndrop = 100
+        stages = ((0.2, 0.8), (0.05, 0.9))
+        # each stage specifies cooling rate and stage end temperature, and
+        #   stages supports extension to change cooling function and to swap
+        #   workpieces in parallel tempering or adjust localsearch parameters
 
-        stop_import = timeit.default_timer()
-        import_time = stop_import - start_import
-        # print(import_time)
+        local_searcher = heuristic_sampler(ndrop, **procproblem)
+        local_searcher.send(None)
 
-        # GENERATE
-        solnsets = []
-        solncosts = []
-        times = []
-        # timelimit = tot_gen_time + 5
-        # while tot_gen_time < timelimit:
-        for _ in xrange(ntrials):
-            start_gen = timeit.default_timer()
-            trialsoln, incidence = generate(rsets, lsets, costs)
-            stop_gen = timeit.default_timer()
-            gen_time = stop_gen - start_gen
+        feasible = init_feasible(**procproblem)
+        workpiece = MH_sampler(feasible, local_searcher)
+        workpiece.send(None)
 
-            solnsets.append(trialsoln)
-            solncosts.append(np.sum(costs[trialsoln]))
-            times.append(gen_time)
-            tot_gen_time += gen_time
-        print(tot_gen_time)
-        print('---')
+        oven = oven_gen(T_init)
+        oven.send(None)
 
-        # df = pd.DataFrame.from_dict({'sets': solnsets,
-        #                              'cost': solncosts,
-        #                              'time': times})
-        # df.to_csv('out/'+current_problem+'.csv')
-        # library[current_problem] = {current_problem: library[current_problem],
-        #                             'dataframe': df}
-
-        # freq = df['cost'].value_counts()
-        # fill_index = np.arange(np.min(freq.index.values),
-        #                        np.max(freq.index.values) + 1)
-        # freq_filled = freq.reindex(fill_index, fill_value=0)
-        # freq_filled.plot.bar()
-        # plt.show()
-
-        print(np.sum(costs[trialsoln]), gen_time)
-        check(rsets, lsets, costs, trialsoln, incidence)
-    stop = timeit.default_timer()
-    print(stop - start, tot_gen_time)
+        for T_end, coolrate in stages:
+            T = oven.send((lambda x: coolrate*x, workpiece))
+            while T > T_end:
+                T, feasible = oven.next()
+        print(np.sum(procproblem['costs'][feasible['sets']]))
 
 
-def generate(rsets, lsets, costs):
+def process_problem(problem_name, **kwargs):
+    """ Load the requested problem and preprocess as desired.
+    All problem preprocessing (reduction or analysis) should be done here.
+    Must provide:
+    - The costs array
+    - List-of-lists (LoL) of
+    -- the sets: element coverage, and
+    -- the elements: set hitting,
+      with the sets indexed in natural order, ie., such that
+      (i <= j) --> (c[i] <= c[j]). The element ordering follows;
+      the element LoL ('lsets') are transpose to the set LoL ('rsets'),
+      in the sense that the rsets are a column-wise LoL representation of the
+      (sparse) unweighted hypergraph adjacency matrix, the lsets row-wise.
     """
-    Pick an initial state for SA.
-     Fast randomized greedy search for reduced feasible solution
+    file_location = "../library/" + problem_name + ".txt"
+    costs, rsets, lsets = heuristic.import_problem(file_location, **kwargs)
+    costs = np.asarray(costs, dtype='uint16')
+    return {'costs': costs, 'rsets': rsets, 'lsets': lsets}
+
+
+def init_feasible(costs, rsets, lsets):
     """
-    trialsoln = []
-    incidence = np.zeros(len(lsets), dtype='uint16')
-    uncovered = set(xrange(len(lsets)))  # should correspond to incidence=0
+    Pick an initial state for SA. Must be a feasible solution which
+    respects any assumptions made by the MH local search; and should
+    be such that MH can return to the initial state.
 
-    while uncovered:  # nonempty set evaluates True
-        hitme = rn.choice(tuple(uncovered))  # random element
-        # find a set in U-S which hits chosen element
-        # for s in lsets[hitme]:
-        #     if s not in trialsoln:
-        #         trialsoln.append(s)
-        #         incidence[list(rsets[s])] += 1
-        #         uncovered -= set(rsets[s])
-        #         break
-        s = lsets[hitme][0]
-        trialsoln.append(s)
-        incidence[list(rsets[s])] += 1
-        uncovered -= set(rsets[s])
+    As such, it is a good idea to use the same heuristic as we do to
+    construct a feasible solution from a partial cover. This guarantees
+    consistency and reversibility.
+    """
+    sets, incidence = heuristic.generate(rsets, lsets, costs)
+    return {'sets': sets, 'incidence': incidence}
 
-    # check for redundancy. Since we add low cost rsets first, the last rsets
-    #  added are more likely to be more costly; check last first.
-    for s in reversed(trialsoln):  # iterator is reversed, not trialsoln!
-        if np.all(incidence[list(rsets[s])] - 1):
+
+def heuristic_sampler(ndrop, costs, rsets, lsets):
+    proposition = None
+    cost_diff = 0
+
+    def dropsets(feasible, ndrop):
+        sets = feasible['sets']
+        incidence = feasible['incidence']
+
+        # Removal is O(n), so choose sets to remove then remove all at once
+        dropme = set()
+        for _ in xrange(ndrop):
+            dropme.add(rn.choice(sets))
+
+        sets[:] = [s for s in sets if s not in dropme]
+        for s in dropme:
             incidence[list(rsets[s])] -= 1
-            trialsoln.remove(s)
+        uncovered = set(np.where(incidence == 0)[0])
+        partial = {'sets': sets, 'incidence': incidence,
+                   'uncovered': uncovered}  # not a feasible cover!
 
-    return (trialsoln, incidence)
+        return partial, dropme
 
+    def complete(sets, incidence, uncovered):
+        # Add
+        added = set()
+        while uncovered:  # nonempty set evaluates True
+            hitme = rn.choice(tuple(uncovered))  # random element
+            s = lsets[hitme][0]
+            sets.append(s)
+            added.add(s)
+            incidence[list(rsets[s])] += 1
+            uncovered -= set(rsets[s])
 
-def check(rsets, lsets, costs,
-          trialsoln, incidence, v=0):
-    if v == 1:
-        print(trialsoln)
-        print(incidence)
-    """DEPRECATED
-    # Do we have a complete cover?
-    covered = set(chain.from_iterable([rsets[s] for s in trialsoln]))
-    print(covered - set(xrange(nelems)))
-    print(set(xrange(nelems)) - covered)
-    assert covered == set(xrange(nelems))
-    """
-    # We construct the cover as a list.
-    #  Do we list a set more than once?
-    assert len(trialsoln) - len(set(trialsoln)) == 0
+        # Reduce
+        dropme = set()
+        for s in reversed(sets):  # iterator is reversed, not trialsoln!
+            if np.all(incidence[list(rsets[s])] - 1):
+                incidence[list(rsets[s])] -= 1
+                dropme.add(s)
+        sets[:] = [s for s in sets if s not in dropme]
 
-
-def import_problem(file_location, w=True, v=True):
-    input_file = open(file_location)
-    current_line = input_file.readline().split(' ')
-    number_of_elements = int(current_line[1])
-    number_of_rsets = int(current_line[2])
-    if v:
-        print(input_file.name)
-        print('Sets: {0}, Elements: {1}'
-              .format(number_of_rsets, number_of_elements))
-
-    rsets = [[] for _ in xrange(number_of_rsets)]
-    lsets = []
-    costs = []
-
-    while len(costs) < number_of_rsets:
-        costs.extend([int(x) for x in
-                      input_file.readline().strip().split(' ')])
-
-    current_element = 0
+        proposition = {'sets': sets, 'incidence': incidence}  # feasible!
+        return proposition, added, dropme
 
     while True:
-        current_line = input_file.readline()
-        if not current_line:
-            break
-        nhits = int(current_line)
-        lset = []
-        while len(lset) < nhits:
-            lset.extend([int(x) - 1 for x in
-                         input_file.readline().strip().split(' ')])
-        lsets.append(tuple(lset))
-        for rset_number in lset:
-            rsets[int(rset_number)].append(current_element)
-        current_element += 1
-    input_file.close()
+        feasible = yield proposition, cost_diff
 
-    if w:
-        assert len(lsets) == number_of_elements
-        assert len(rsets) == number_of_rsets
+        partial, dropped = dropsets(feasible, ndrop)
+        proposition, added, reduced = complete(**partial)
 
-    lsets = tuple(lsets)
-    rsets = tuple(tuple(elem for elem in s) for s in rsets)
-    return costs, rsets, lsets
+        subtracted = dropped.union(reduced)
+        negated = subtracted.intersection(added)
+        # these sets are generators and upset numpy causing error in cast to
+        #   uint on sum over costs. Can't use np.sum or index costs by list...
+        cost_diff = 0
+        for i in added.difference(negated):
+            cost_diff += costs[i]
+        for i in subtracted.difference(negated):
+            cost_diff -= costs[i]
+        # cost_diff = (np.sum(costs[list(added.difference(negated))]) -
+        #              np.sum(costs[list(subtracted.difference(negated))]))
+
+
+def MH_sampler(feasible, local_searcher):
+    while True:
+        T = yield feasible
+        proposed, cost_diff = local_searcher.send(feasible)
+        if cost_diff < 0 or rn.random() < np.exp(-cost_diff/T):
+            feasible = proposed
+
+
+def oven_gen(T):
+    while True:
+        f, workpiece = yield T
+        while True:
+            yield T, workpiece.send(T)
+            T = f(T)
 
 if __name__ == "__main__":
     main()
-
-
-# Search
-#     Perturb
-#     """
-#     Remove columns to produce partial solution.
-#     Randomly or by least uniqueness
-#     """
-#     Construct
-#     """
-#     Create feasible solution from partial solution.
-#     Greedy heuristic
-#     """
-#     Redund
-#     """
-#     Remove unnecessary columns.
-#     Consider columns in decreasing order of cost for feasible removal
-#     """

@@ -2,7 +2,8 @@
 % arara: biber
 % arara: pdflatex: { shell : yes, action: nonstopmode, draft: yes }
 % arara: pdflatex: { shell : yes, action: nonstopmode}
-\documentclass[paper=letter, BCOR=0mm, DIV=calc, fontsize=10pt]{scrreprt}
+\documentclass[paper=letter, BCOR=0mm, DIV=calc, fontsize=10pt,%
+               titlepage=true]{scrartcl}
 
 \usepackage[utf8]{inputenc}
 \DeclareUnicodeCharacter{2212}{$-{}$} % matplotlib negative ticklabels
@@ -16,6 +17,7 @@
   % \AtBeginDocument{\renewcommand{\partial}{\uppartial}}
 \setkomafont{disposition}{\normalcolor\sffamily}
 \pagestyle{headings}
+\usepackage[normalem]{ulem}
 
 %BIB%
 \usepackage[%
@@ -30,12 +32,12 @@
 \DefineBibliographyStrings{english}{%
   bibliography = {References},% replace "references" with "bibliography"  for `book`/`report`
 }
-\setlength\bibitemsep{1.5\itemsep} %increase entry spacing. Nice if the global spacing is single space. Default is \itemsep
+\setlength\bibitemsep{\itemsep} %increase entry spacing. Nice if the global spacing is single space. Default is \itemsep
 \KOMAoption{bibliography}{openstyle, totoc}
 
 % % Table stuff
 % \usepackage[separate-uncertainty, table-omit-exponent]{siunitx}
-\usepackage{booktabs}
+% \usepackage{booktabs}
 % \addtokomafont{caption}{\small}
 % \setkomafont{captionlabel}{\normalsize}
 % \setcapindent{1em}
@@ -57,7 +59,8 @@
 
 % KOMA-script or custom geometry? Choose one:
 % \typearea[current]{last}
-\usepackage[top=1.12in, bottom=1.62in, left=1.7in, right=1.7in]{geometry}
+% \usepackage[top=1.12in, bottom=1.62in, left=1.7in, right=1.7in]{geometry}
+\usepackage[top=0.78in, bottom=1.22in, left=1.35in, right=1.35in]{geometry}
 
 \usepackage{minted}
 \usemintedstyle{tango}
@@ -69,10 +72,9 @@
   counterwithin=chapter
 ]{slol}
 
-% \input{util/datamacros.tex}
-% \input{util/figuremacros.tex}
+\input{util/datamacros.tex}
+\input{util/figuremacros.tex}
 % \input{util/tablemacros.tex}
-\graphicspath{{images/}}
 
 \usepackage[all]{foreign} %which, among other things, uses the commands from xpunctuate to define \eg and \ie
 \renewcommand\foreignfullfont{\emph} % default \emph. Biblatex does not emphasize latin, so I may want to remove emphasis to keep things cohesive.
@@ -81,7 +83,7 @@
 \defasforeign[sans]{sans}
 
 \subject{CSI4105 Type 1 Project}
-\title{Weighted Set Covering Problem}
+\title{Weighted Set Covering Problem Research Proposal}
 \author{
         Ali Mowazi \\ \texttt{amowa058@uottawa.ca} \\ 5879953
         \and Jeremiah O'Neil \\ \texttt{jonei096@uottawa.ca} \\ 6498391
@@ -93,7 +95,6 @@
 \usepackage{todonotes}
 
 \input{build_aux}
-\pagenumbering{roman}
 
 \begin{document}
   \input{\target}

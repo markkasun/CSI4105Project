@@ -1,0 +1,54 @@
+\section{Greedy Heuristic}\label{sec:heur}
+
+Our heuristic algorithm is intended to quickly find an initial feasible solution and to construct neighbouring solutions for Simulated Annealing in a randomized manner. To this end we employ a fast greedy method proposed by Balas and Ho in 1987\todo{cite}.
+
+This algorithm is intended for weighted set covering problems in particular, and aims to exploit the array of set costs -- and little else. It first greedily seeks the cheapest sets which help it to complete the cover by randomly choosing uncovered elements and selecting precisely the cheapest set which covers it. Usually, a combination of sets chosen later will include earlier sets as a subset, so that the latter become redundant. In order to capitalize on redundancies the algorithm greedily seeks expensive sets which can be removed without making the cover infeasible. It does this by iterating over the sets which were added to construct the cover in reverse order of their addition, and removes them if possible. This is summarized in the pseudocode below.
+\begin{itemize}
+    \item Initialize $C=\{\}$ and $X=[]$
+    \item While $|C| \neq |U|$
+    \begin{itemize}
+        \item Pick a random element in $C$, and find the set $S$ of minimal cost which covers the element
+        \item Let $C = C \cup S$ and append $S$ to $X$
+    \end{itemize}
+    \item Examine each selected set, in order by recency of selection. If the set is redundant -- that is, it can be removed without leaving an element uncovered -- remove it.
+    \item Return the cover $X$.
+\end{itemize}
+
+The order of addition of sets is important to this algorithm. Cheap sets which cover many elements are statistically more likely to be added earlier, since there are more elements whose random selection prescribes the selection of these sets. Thus the algorithm discerns some statistical information about the cost effectiveness of the sets without performing any calculation, which is expressed in the order of the sets and exploited in the reduction by iterating in reverse. In essence, since the later sets added to build a complete cover are less likely to have a high cost-effectiveness, we are more likely to reduce to a cost-effective cover if we judge the later sets first.
+
+While this algorithm has no performance guarantee, it scales better than the approximation algorithm since it does not compute cost-effectiveness across sets at each addition; yet it still exploits cost effectiveness in an implicit statistical manner, and performs better than the ``take the cheapest'' greedy idea would lead one to expect.
+
+Our implementation of this algorithm has been written with its application as a subroutine of Simulated Annealing firmly in mind. As such, we have presumed a preprocessing step precedes the algorithm which sorts the array of costs in nondecreasing order, and indexes the sets accordingly; this is referred to in literature, \eg as by~\cite{JacobsBrusco}, as the ``natural order'' of the weighted set covering problem specification, and is the format used by our test problems from the OR Library. In fact, the OR library format can be described as a column-wise list-of-lists sparse representation of the problem's unweighted hypergraph adjacency matrix in a natural-order basis, such that we know the set of sets which cover each element in order of their cost. These problems are then already in the optimal format for application of the heuristic algorithm, and our implementation benefits from this -- while the approximation algorithm does not.
+
+\section{Simulated Annealing}
+
+NP-Hard optimization problems with NP-Complete decision problem analogs are characterized by an objective function which is easy to evaluate at a point but a ``search space'' of feasible solutions which is exponentially large in the size of the problem. Local search is a strategy which attempts to find a good solution quickly by iteratively evaluating feasible solutions which are in some heuristic sense similar to the present solution -- in its ``neighbourhood'' -- and choosing solutions which are an improvement on the present. An ideal local search algorithm thereby works toward optimality while evaluating only an exponentially smaller subset of the search space---but inevitably will converge to a a point which is only optimal with respect to its immediate neighbours. Our Heuristic and Approximation algorithms apply different local search strategies to the minimum weighted set covering problem, and in our tests find results fairly close to the global minimum, but very rarely attain it.
+
+Metaheuristics are algorithms which augment local search with global information, progressively divining the structure of the search space from local search results and guiding the local searches towards the optimal. In order to improve on the performance of our algorithms, we guide the local search with an annealing metaheuristic; that is, one which allows selection of inferior neighbouring solutions prescribed according to a ``computational temperature'' parameter whose magnitude corresponds to a ``smoothing'' of the neighbourhood structure which the local search algorithm imposes on the search space. Of the varieties of annealing metaheuristics, we choose Simulated Annealing (SA) due~\cite{Kirkpatrick671}, which was the first annealing method used in optimization and has remained the most popular. The SA pseudocode follows:
+\begin{itemize}
+    \item GENERATE an initial solution $X$
+    \item for $T$ in schedule:
+    \begin{itemize}
+        \item SEARCH for a neighbour solution $X'$
+        \item let $\Delta = cost(X) - cost(X')$
+        \item if $\Delta < 0$ or rand(0, 1] < $\exp(-\frac{\Delta}{T})$
+        \begin{itemize}
+            \item let $X = X'$
+        \end{itemize}
+    \end{itemize}
+    \item return $X$
+\end{itemize}
+
+The GENERATE and SEARCH subprocedures respectively define the initial state and neighbourhood of states. In our SA algorithm we base both on the heuristic algorithm outlined in~\ref{sec:heur}. The GENERATE subprocedure just runs the heuristic from $C=\{\}$ and $X=[]$. The SEARCH subprocedure randomly removes sets from a feasible cover $X$, creating a partial cover which is then completed by the heuristic.
+
+In our implementation, we use the fact that $\Delta$ is a cost difference and can be very easily evaluated in terms of only the set removals and additions in a single SEARCH iteration. Our algorithm has been designed to allow random swapping of the SEARCH algorithm to a different local-search heuristic at fixed state, in order to expand the search neighbourhood; as well as swapping state between simultaneous annealing runs -- and integration of ideas from Parallel Tempering, a different annealing method due~\cite{Swendsen_Wang_1986} -- to allow ``tunneling'' between regions of the search space and make the algorithm parallelizable. However, the investigation of these capabilities is not within the scope of this project, and we restrict our analysis to one annealer with the above-defined SEARCH subprocedure based on our heuristic.
+
+Without augmentation, SA with this SEARCH subprocedure enjoys an expanded search space versus the heuristic \perse, but is not sufficient to enable exploration of the entire space -- and our SA implementation cannot in general find the optimum.
+
+This initial implementation also faces the problem that the SEARCH procedure can often yield a state which is equivalent state to the current state. This is not of itself a problem; in terms of the mathematical foundations of the algorithm, it is expected, even necessary. When the neighbourhood is small, the cooling rate is in effect increased by the increased frequency of non-moves. However, the entire cooling schedule can be exhausted in this way for certain problems, making tweaking necessary. We've devised additional parameters which serve as a sort of second-order temperature, controlling the distribution of the SEARCH neighbourhood distribution directly: the number of drops to make in transforming a cover to a partial cover within the SEARCH routine, and an ``activity'' parameter which demands of the SEARCH procedure a minimum number of attempts towards a unique neighbour before allowing the proposition of a non-move.
+
+Through experimentation, we have found that the standard exponential cooling schedule works well for the problems we consider, and have set it to run in stages with different (increasing) cooling rates to target temperature ratios to improve the speed of convergence. The activity has been defined to change proportionally to the temperature, to conserve the concept of ``cooling'': we want the neighbourhoods to sharpen on both scales. We've set the temperature scale, the number of drops in SEARCH, and initial activity as functions in the number of elements and sets and total size, as well as average set cost, of arbitrary problems to correspond roughly to our intuitive expectations for a reasonable annealing run for arbitrary problems. This is one of the more interesting aspects of our work, but unfortunately the details do not suit the scope of this report. However, it should be noted that all runs in our analysis were executed for very different problems with very different, adaptively determined parameters; and we were unable to significantly improve results by hand-tuning. In order to improve our algorithm further we must expand the SEARCH subroutine beyond the simple heuristic such that the algorithm can explore a larger subspace of feasible solutions.
+
+% Annealing metaheuristics include~\cite{Neal_2001} Annealed Importance Sampling,~\cite{Swendsen_Wang_1986} Parallel Tempering and~\cite{Kirkpatrick671} Simulated Annealing
+
+

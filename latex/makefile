@@ -1,5 +1,5 @@
 MAIN=main
-TARGET=Proposal
+TARGET=Report
 BIB=$(TARGET)
 BIBDIR=ref
 CLEANEXT=aux toc lof idx ilg ind log bbl bcf ist blg run.xml out pdf

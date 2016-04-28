@@ -1,0 +1,18 @@
+Our heuristic algorithm is intended to quickly find an initial feasible solution and to construct neighbouring solutions for Simulated Annealing in a randomized manner. To this end we employ a fast greedy method proposed by Balas and Ho in 1987\todo{cite}.
+
+This algorithm is intended for weighted set covering problems in particular, and aims to exploit the array of set costs -- and little else. It first greedily seeks the cheapest sets which help it to complete the cover by randomly choosing uncovered elements and selecting precisely the cheapest set which covers it. Usually, a combination of sets chosen later will include earlier sets as a subset, so that the latter become redundant. In order to capitalize on redundancies the algorithm greedily seeks expensive sets which can be removed without making the cover infeasible. It does this by iterating over the sets which were added to construct the cover in reverse order of their addition, and removes them if possible. This is summarized in the pseudocode below.
+\begin{itemize}
+    \item Initialize $C={}$ and $X=[]$
+    \item While $|C| \neq |U|$
+    \begin{itemize}
+        \item Pick a random element in $C$, and find the set $S$ of minimal cost which covers the element
+        \item Let $C = C \cup S$ and append $S$ to $X$
+    \end{itemize}
+    \item Examine each selected set, in order by recency of selection. If the set is redundant -- that is, it can be removed without leaving an element uncovered -- remove it.
+    \item Return the cover $X$.
+\end{itemize}
+
+The order of addition of sets is important to this algorithm. Cheap sets which cover many elements are statistically more likely to be added earlier, since there are more elements whose random selection prescribes the selection of these sets. Thus the algorithm discerns some statistical information about the cost effectiveness of the sets without performing any calculation, which is expressed in the order of the sets and exploited in the reduction by iterating in reverse. In essence, since the later sets added to build a complete cover are less likely to have a high cost-effectiveness, we are more likely to reduce to a cost-effective cover if we judge the later sets first.
+
+While this algorithm has no performance guarantee, it scales better than the approximation algorithm since it does not compute cost-effectiveness across sets at each addition; yet it still exploits cost effectiveness in an implicit statistical manner, and performs better than the ``take the cheapest'' greedy idea would lead one to expect.
+

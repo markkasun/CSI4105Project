@@ -11,9 +11,16 @@ import heuristic.main as heuristic
 
 
 def main():
-    nruns = 1
+    maxruns = 10
+    maxtime = 60*5
     problems = sorted(library)
-    # problems = ['scp41']
+    # problems = ['scpcyc11']
+    paramdict = {'problem': list(),
+                 'size': list(),
+                 'T_init': list(),
+                 'stages': list(),
+                 'ndrop': list(),
+                 'activity_init': list()}
 
     for problem_name in problems:
         procproblem = process_problem(problem_name, w=False, v=True)
@@ -24,49 +31,65 @@ def main():
             size += len(s)
         print('Size: {}'.format(size))
 
-        T_init = np.mean(procproblem['costs']) * nsets
+        T_init = np.average(procproblem['costs']) * np.log2(size)
         ndrop = int(np.ceil(0.2 * nsets * nelems / size))
         # consider approxcost/meansetweight
-        print ndrop
-        activity_init = nelems
-        stages = [(0.05*T_init, 0.8)]
-        # stages = [(0.2, 0.8), (0.05, 0.9)]
+        activity_init = 100
+        stages = [(0.5*T_init, 0.95), (0.1*T_init, 0.9), (0.01*T_init, 0.8)]
         # each stage specifies cooling rate and stage end temperature, and
         #   stages supports extension to change cooling function and to swap
         #   workpieces in parallel tempering or adjust localsearch parameters
-
-        local_searcher = heuristic_sampler(ndrop, **procproblem)
-        local_searcher.send(None)
-
-        activity_func = lambda x: activity_init * x / T_init
-        feasible = init_feasible(**procproblem)
-        workpiece = MH_sampler(feasible, activity_func, local_searcher)
-        workpiece.send(None)
-
-        oven = oven_gen(T_init)
-        oven.send(None)
+        paramdict['problem'].append(problem_name),
+        paramdict['size'].append(size),
+        paramdict['T_init'].append(T_init),
+        paramdict['stages'].append(stages),
+        paramdict['ndrop'].append(ndrop),
+        paramdict['activity_init'].append(activity_init),
 
         times = []
         costs = []
-        for _ in xrange(nruns):
-            start_time = timeit.default_timer()
+        iters = []
+        problemtime = 0
+        runs = 0
+        while problemtime < maxtime and runs < maxruns:
+            runs += 1
+            local_searcher = heuristic_sampler(ndrop, **procproblem)
+            local_searcher.send(None)
+
+            activity_func = lambda x: activity_init * x / T_init
+            feasible = init_feasible(**procproblem)
+            workpiece = MH_sampler(feasible, activity_func, local_searcher)
+            workpiece.send(None)
+
+            oven = oven_gen(T_init)
+            oven.send(None)
+
+            iteration = 1
+            start_tstamp = timeit.default_timer()
 
             for T_end, coolrate in stages:
-                T = oven.send((lambda x: coolrate*x, workpiece))
+                T = oven.send((lambda x: coolrate*x, workpiece))[0]
                 while T > T_end:
                     T, feasible = oven.next()
+                    iteration += 1
 
-            stop_time = timeit.default_timer()
-            runtime = stop_time - start_time
+            stop_tstamp = timeit.default_timer()
+            runtime = stop_tstamp - start_tstamp
             times.append(runtime)
+            problemtime += runtime
             cost = np.sum(procproblem['costs'][feasible['sets']])
             costs.append(cost)
+            iters.append(iteration)
             print(cost, runtime)
         print('---')
 
-        df = pd.DataFrame.from_dict({'cost': costs,
-                                     'time': times})
-        df.to_csv('out/'+problem_name+'.csv')
+        resultsdf = pd.DataFrame.from_dict({'cost': costs,
+                                            'time': times,
+                                            'iters': iters})
+        resultsdf.to_csv('out/'+problem_name+'.csv')
+
+    paramdf = pd.DataFrame.from_dict(paramdict)
+    paramdf.to_csv('out/parameters.csv')
 
 
 def process_problem(problem_name, **kwargs):

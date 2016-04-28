@@ -16,7 +16,6 @@ from GreedySetCover.main import library
 # fulldf.to_csv('heuristic.csv')
 
 problems = sorted(library)  # sorted([_ for _ in library if "scpe" in _])
-data = {}
 avgtimes = []
 avgcosts = []
 maxcosts = []
